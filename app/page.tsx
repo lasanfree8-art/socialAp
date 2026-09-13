@@ -350,7 +350,7 @@ export default function Home() {
                         }
                         placeholder="Add a comment..."
                         className="flex-1 rounded-md border px-3 py-2 outline-none"
-                          onKeyDown={(e) => {
+                                                  onKeyDown={(e) => {
                           if (e.key === "Enter") {
                             addComment(post.id);
                           }
@@ -359,8 +359,22 @@ export default function Home() {
 
                       <button
                         onClick={() => addComment(post.id)}
-                        className="rounded-md bg-blue-500 px-4 py-2 text-white"
+                        className="rounded-md bg-blue-600 px-4 py-2 text-white"
                       >
                         Post
                       </button>
+
                     </div>
+
+                  </div>
+
+                </article>
+              );
+            })}
+
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
