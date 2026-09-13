@@ -20,9 +20,22 @@ type Like = {
   user_id: string;
 };
 
+type Comment = {
+  id: number;
+  post_id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  profiles: {
+    username: string;
+  }[] | null;
+};
+
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [likes, setLikes] = useState<Like[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,6 +74,26 @@ export default function Home() {
       console.error("Likes error:", likesError);
     } else {
       setLikes((likesData as Like[]) || []);
+    }
+
+    const { data: commentsData, error: commentsError } = await supabase
+      .from("comments")
+      .select(`
+        id,
+        post_id,
+        user_id,
+        content,
+        created_at,
+        profiles (
+          username
+        )
+      `)
+      .order("created_at", { ascending: true });
+
+    if (commentsError) {
+      console.error("Comments error:", commentsError);
+    } else {
+      setComments((commentsData as Comment[]) || []);
     }
 
     setLoading(false);
@@ -126,19 +159,64 @@ export default function Home() {
     }
   }
 
+  async function addComment(postId: number) {
+    const text = commentText[postId]?.trim();
+
+    if (!text) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("comments")
+      .insert({
+        post_id: postId,
+        user_id: user.id,
+        content: text,
+      })
+      .select(`
+        id,
+        post_id,
+        user_id,
+        content,
+        created_at,
+        profiles (
+          username
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error("Comment error:", error);
+      return;
+    }
+
+    setComments((current) => [
+      ...current,
+      data as Comment,
+    ]);
+
+    setCommentText((current) => ({
+      ...current,
+      [postId]: "",
+    }));
+  }
+
   function getLikeCount(postId: number) {
     return likes.filter(
       (like) => like.post_id === postId
     ).length;
   }
 
-  function isLiked(postId: number, userId: string | undefined) {
-    if (!userId) return false;
-
-    return likes.some(
-      (like) =>
-        like.post_id === postId &&
-        like.user_id === userId
+  function getPostComments(postId: number) {
+    return comments.filter(
+      (comment) => comment.post_id === postId
     );
   }
 
@@ -175,6 +253,7 @@ export default function Home() {
 
             {posts.map((post) => {
               const profile = post.profiles?.[0];
+              const postComments = getPostComments(post.id);
 
               return (
                 <article
@@ -182,6 +261,7 @@ export default function Home() {
                   className="overflow-hidden rounded-lg bg-white shadow"
                 >
 
+                  {/* User */}
                   <div className="flex items-center gap-3 p-4">
 
                     {profile?.avatar_url ? (
@@ -202,6 +282,7 @@ export default function Home() {
 
                   </div>
 
+                  {/* Image */}
                   <img
                     src={post.image_url}
                     alt="Post"
@@ -210,6 +291,7 @@ export default function Home() {
 
                   <div className="p-4">
 
+                    {/* Actions */}
                     <div className="mb-3 flex gap-4">
 
                       <button
@@ -225,10 +307,12 @@ export default function Home() {
 
                     </div>
 
+                    {/* Likes */}
                     <p className="font-semibold">
                       {getLikeCount(post.id)} likes
                     </p>
 
+                    {/* Caption */}
                     {post.caption && (
                       <p className="mt-2">
                         <span className="font-semibold">
@@ -238,16 +322,32 @@ export default function Home() {
                       </p>
                     )}
 
-                  </div>
+                    {/* Comments */}
+                    <div className="mt-4 space-y-2">
 
-                </article>
-              );
-            })}
+                      {postComments.map((comment) => (
+                        <div key={comment.id}>
+                          <span className="font-semibold">
+                            {comment.profiles?.[0]?.username || "User"}
+                          </span>{" "}
+                          {comment.content}
+                        </div>
+                      ))}
 
-          </div>
-        )}
+                    </div>
 
-      </div>
-    </main>
-  );
-}
+                    {/* Add Comment */}
+                    <div className="mt-4 flex gap-2">
+
+                      <input
+                        type="text"
+                        value={commentText[post.id] || ""}
+                        onChange={(e) =>
+                          setCommentText((current) => ({
+                            ...current,
+                            [post.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="Add a comment..."
+                        className="flex-1 rounded-md border px-3 py-2 outline-none"
+                        on
