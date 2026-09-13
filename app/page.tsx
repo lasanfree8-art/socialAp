@@ -15,16 +15,24 @@ type Post = {
   }[] | null;
 };
 
+type Like = {
+  post_id: number;
+  user_id: string;
+};
+
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [likes, setLikes] = useState<Like[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchPosts();
+    loadFeed();
   }, []);
 
-  async function fetchPosts() {
-    const { data, error } = await supabase
+  async function loadFeed() {
+    setLoading(true);
+
+    const { data: postsData, error: postsError } = await supabase
       .from("posts")
       .select(`
         id,
@@ -39,13 +47,99 @@ export default function Home() {
       `)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching posts:", error);
+    if (postsError) {
+      console.error("Posts error:", postsError);
     } else {
-      setPosts((data as Post[]) || []);
+      setPosts((postsData as Post[]) || []);
+    }
+
+    const { data: likesData, error: likesError } = await supabase
+      .from("likes")
+      .select("post_id, user_id");
+
+    if (likesError) {
+      console.error("Likes error:", likesError);
+    } else {
+      setLikes((likesData as Like[]) || []);
     }
 
     setLoading(false);
+  }
+
+  async function toggleLike(postId: number) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Please login first");
+      return;
+    }
+
+    const alreadyLiked = likes.some(
+      (like) =>
+        like.post_id === postId &&
+        like.user_id === user.id
+    );
+
+    if (alreadyLiked) {
+      const { error } = await supabase
+        .from("likes")
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Unlike error:", error);
+        return;
+      }
+
+      setLikes((current) =>
+        current.filter(
+          (like) =>
+            !(
+              like.post_id === postId &&
+              like.user_id === user.id
+            )
+        )
+      );
+    } else {
+      const { error } = await supabase
+        .from("likes")
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+        });
+
+      if (error) {
+        console.error("Like error:", error);
+        return;
+      }
+
+      setLikes((current) => [
+        ...current,
+        {
+          post_id: postId,
+          user_id: user.id,
+        },
+      ]);
+    }
+  }
+
+  function getLikeCount(postId: number) {
+    return likes.filter(
+      (like) => like.post_id === postId
+    ).length;
+  }
+
+  function isLiked(postId: number, userId: string | undefined) {
+    if (!userId) return false;
+
+    return likes.some(
+      (like) =>
+        like.post_id === postId &&
+        like.user_id === userId
+    );
   }
 
   return (
@@ -117,17 +211,22 @@ export default function Home() {
                   <div className="p-4">
 
                     <div className="mb-3 flex gap-4">
-                      <button>
+
+                      <button
+                        onClick={() => toggleLike(post.id)}
+                        className="font-medium"
+                      >
                         ❤️ Like
                       </button>
 
-                      <button>
+                      <button className="font-medium">
                         💬 Comment
                       </button>
+
                     </div>
 
                     <p className="font-semibold">
-                      0 likes
+                      {getLikeCount(post.id)} likes
                     </p>
 
                     {post.caption && (
