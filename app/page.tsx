@@ -12,7 +12,7 @@ type Post = {
   profiles: {
     username: string;
     avatar_url: string | null;
-  } | null;
+  }[] | null;
 };
 
 export default function Home() {
@@ -56,7 +56,6 @@ export default function Home() {
           SocialAp
         </h1>
 
-        {/* Create Post */}
         <div className="mb-6 rounded-lg bg-white p-4 shadow">
           <h2 className="mb-3 text-lg font-semibold">
             Create a Post
@@ -67,7 +66,6 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Feed */}
         {loading ? (
           <p className="text-center text-gray-500">
             Loading posts...
@@ -81,71 +79,71 @@ export default function Home() {
         ) : (
           <div className="space-y-6">
 
-            {posts.map((post) => (
-              <article
-                key={post.id}
-                className="overflow-hidden rounded-lg bg-white shadow"
-              >
+            {posts.map((post) => {
+              const profile = post.profiles?.[0];
 
-                {/* User */}
-                <div className="flex items-center gap-3 p-4">
+              return (
+                <article
+                  key={post.id}
+                  className="overflow-hidden rounded-lg bg-white shadow"
+                >
 
-                  {post.profiles?.avatar_url ? (
-                    <img
-                      src={post.profiles.avatar_url}
-                      alt="Profile"
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-300">
-                      👤
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3 p-4">
 
-                  <p className="font-semibold">
-                    {post.profiles?.username || "User"}
-                  </p>
+                    {profile?.avatar_url ? (
+                      <img
+                        src={profile.avatar_url}
+                        alt="Profile"
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-300">
+                        👤
+                      </div>
+                    )}
 
-                </div>
+                    <p className="font-semibold">
+                      {profile?.username || "User"}
+                    </p>
 
-                {/* Post Image */}
-                <img
-                  src={post.image_url}
-                  alt="Post"
-                  className="w-full object-cover"
-                />
-
-                {/* Actions */}
-                <div className="p-4">
-
-                  <div className="mb-3 flex gap-4">
-                    <button>
-                      ❤️ Like
-                    </button>
-
-                    <button>
-                      💬 Comment
-                    </button>
                   </div>
 
-                  <p className="font-semibold">
-                    0 likes
-                  </p>
+                  <img
+                    src={post.image_url}
+                    alt="Post"
+                    className="w-full object-cover"
+                  />
 
-                  {/* Caption */}
-                  {post.caption && (
-                    <p className="mt-2">
-                      <span className="font-semibold">
-                        {post.profiles?.username || "User"}
-                      </span>{" "}
-                      {post.caption}
+                  <div className="p-4">
+
+                    <div className="mb-3 flex gap-4">
+                      <button>
+                        ❤️ Like
+                      </button>
+
+                      <button>
+                        💬 Comment
+                      </button>
+                    </div>
+
+                    <p className="font-semibold">
+                      0 likes
                     </p>
-                  )}
 
-                </div>
+                    {post.caption && (
+                      <p className="mt-2">
+                        <span className="font-semibold">
+                          {profile?.username || "User"}
+                        </span>{" "}
+                        {post.caption}
+                      </p>
+                    )}
 
-              </article>
-            ))}
+                  </div>
+
+                </article>
+              );
+            })}
 
           </div>
         )}
