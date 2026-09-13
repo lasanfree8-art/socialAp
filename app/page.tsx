@@ -9,6 +9,10 @@ type Post = {
   image_url: string;
   caption: string | null;
   created_at: string;
+  profiles: {
+    username: string;
+    avatar_url: string | null;
+  } | null;
 };
 
 export default function Home() {
@@ -22,13 +26,23 @@ export default function Home() {
   async function fetchPosts() {
     const { data, error } = await supabase
       .from("posts")
-      .select("*")
+      .select(`
+        id,
+        user_id,
+        image_url,
+        caption,
+        created_at,
+        profiles (
+          username,
+          avatar_url
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching posts:", error);
     } else {
-      setPosts(data || []);
+      setPosts((data as Post[]) || []);
     }
 
     setLoading(false);
@@ -37,7 +51,10 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-100">
       <div className="mx-auto max-w-2xl px-4 py-8">
-        <h1 className="mb-6 text-3xl font-bold">SocialAp</h1>
+
+        <h1 className="mb-6 text-3xl font-bold">
+          SocialAp
+        </h1>
 
         {/* Create Post */}
         <div className="mb-6 rounded-lg bg-white p-4 shadow">
@@ -63,43 +80,76 @@ export default function Home() {
           </div>
         ) : (
           <div className="space-y-6">
+
             {posts.map((post) => (
               <article
                 key={post.id}
                 className="overflow-hidden rounded-lg bg-white shadow"
               >
-                <div className="p-4">
+
+                {/* User */}
+                <div className="flex items-center gap-3 p-4">
+
+                  {post.profiles?.avatar_url ? (
+                    <img
+                      src={post.profiles.avatar_url}
+                      alt="Profile"
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-300">
+                      👤
+                    </div>
+                  )}
+
                   <p className="font-semibold">
-                    User
+                    {post.profiles?.username || "User"}
                   </p>
+
                 </div>
 
+                {/* Post Image */}
                 <img
                   src={post.image_url}
                   alt="Post"
                   className="w-full object-cover"
                 />
 
+                {/* Actions */}
                 <div className="p-4">
+
                   <div className="mb-3 flex gap-4">
-                    <button>❤️ Like</button>
-                    <button>💬 Comment</button>
+                    <button>
+                      ❤️ Like
+                    </button>
+
+                    <button>
+                      💬 Comment
+                    </button>
                   </div>
 
                   <p className="font-semibold">
                     0 likes
                   </p>
 
+                  {/* Caption */}
                   {post.caption && (
                     <p className="mt-2">
+                      <span className="font-semibold">
+                        {post.profiles?.username || "User"}
+                      </span>{" "}
                       {post.caption}
                     </p>
                   )}
+
                 </div>
+
               </article>
             ))}
+
           </div>
         )}
+
       </div>
     </main>
   );
